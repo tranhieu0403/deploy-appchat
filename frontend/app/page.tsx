@@ -188,8 +188,12 @@ function HomeContent() {
     if (!isAuthenticated) return
 
     // Initialize socket connection
-    // Tự động detect backend URL dựa vào hostname hiện tại
+    // Lấy backend URL từ environment variable hoặc detect tự động
     const getSocketUrl = () => {
+      // Ưu tiên dùng NEXT_PUBLIC_API_URL từ Vercel env
+      if (process.env.NEXT_PUBLIC_API_URL) {
+        return process.env.NEXT_PUBLIC_API_URL
+      }
       if (typeof window === 'undefined') return 'http://localhost:3001'
       const hostname = window.location.hostname
       // Nếu truy cập qua Radmin VPN IP
@@ -779,7 +783,10 @@ function HomeContent() {
           formData.append('mentions', JSON.stringify(mentions))
         }
 
-        const response = await fetch('http://localhost:3001/api/messages/upload', {
+        const uploadUrl = process.env.NEXT_PUBLIC_API_URL
+          ? `${process.env.NEXT_PUBLIC_API_URL}/api/messages/upload`
+          : 'http://localhost:3001/api/messages/upload'
+        const response = await fetch(uploadUrl, {
           method: 'POST',
           body: formData,
         })

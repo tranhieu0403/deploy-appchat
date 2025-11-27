@@ -21,8 +21,12 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [registerPassword, setRegisterPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  // Tự động detect backend URL dựa vào hostname hiện tại
+  // Lấy backend URL từ environment variable hoặc detect tự động
   const getBackendUrl = () => {
+    // Ưu tiên dùng NEXT_PUBLIC_API_URL từ Vercel env
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL
+    }
     if (typeof window === 'undefined') return 'http://localhost:3001'
     const hostname = window.location.hostname
     // Nếu truy cập qua Radmin VPN IP
