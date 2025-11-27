@@ -30,13 +30,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- KẾT NỐI MONGODB ---
-// Hỗ trợ nhiều tên biến môi trường (Railway có thể dùng MONGO_URL, DATABASE_URL, etc.)
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || process.env.DATABASE_URL;
+// Hỗ trợ nhiều tên biến môi trường (Railway dùng MONGO_PUBLIC_URL)
+const MONGO_URI = process.env.MONGO_URI ||
+                  process.env.MONGO_URL ||
+                  process.env.MONGO_PUBLIC_URL ||
+                  process.env.DATABASE_URL;
 
 if (!MONGO_URI) {
-  console.error("LỖI NGHIÊM TRỌNG: MONGO_URI không được tìm thấy trong biến môi trường");
-  console.error("Hãy đảm bảo đã thêm MONGO_URI, MONGO_URL hoặc DATABASE_URL vào Railway Variables.");
-  process.exit(1); 
+  console.error("LỖI NGHIÊM TRỌNG: Không tìm thấy MongoDB connection string");
+  console.error("Hãy thêm một trong các biến: MONGO_URI, MONGO_URL, MONGO_PUBLIC_URL, DATABASE_URL");
+  process.exit(1);
 }
 
 // Debug: Log một phần connection string để kiểm tra (không log password)
