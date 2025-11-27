@@ -202,9 +202,9 @@ export default function ChatRoom({
       </header>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex max-w-7xl mx-auto w-full px-4 py-6 gap-4">
-        {/* Rooms Sidebar (Left) */}
-        <div className={`w-64 rounded-lg shadow-lg p-4 flex flex-col ${panelClass}`}>
+      <div className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto w-full px-2 sm:px-4 py-2 sm:py-6 gap-2 sm:gap-4">
+        {/* Rooms Sidebar (Left) - Hidden on mobile, show on desktop */}
+        <div className={`hidden lg:flex lg:w-64 rounded-lg shadow-lg p-4 flex-col ${panelClass}`}>
           <h2 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-gray-50' : 'text-gray-800'}`}>
             Đoạn chat của bạn
           </h2>
@@ -235,7 +235,7 @@ export default function ChatRoom({
         </div>
 
         {/* Messages Section (Center) */}
-        <div className={`flex-1 flex flex-col rounded-lg shadow-lg overflow-hidden ${panelClass}`}>
+        <div className={`flex-1 flex flex-col rounded-lg shadow-lg overflow-hidden ${panelClass} min-h-0`}>
           <MessageList
             messages={filteredMessages}
             currentUsername={username}
@@ -255,8 +255,8 @@ export default function ChatRoom({
           />
         </div>
 
-        {/* Users Sidebar (Right) */}
-        <div className={`w-64 rounded-lg shadow-lg p-4 ${panelClass}`}>
+        {/* Users Sidebar (Right) - Hidden on mobile, show on desktop */}
+        <div className={`hidden lg:flex lg:w-64 rounded-lg shadow-lg p-4 ${panelClass}`}>
           <UserList users={users} currentUsername={username} onStartCall={onStartCall} isDarkMode={isDarkMode} />
         </div>
       </div>

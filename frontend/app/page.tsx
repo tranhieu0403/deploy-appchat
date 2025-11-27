@@ -215,96 +215,55 @@ function HomeContent() {
     newSocket.on('connect', () => {
       console.log('Connected to server')
       setIsConnected(true)
-      
-      // Restore rooms from localStorage and rejoin them (only if they belong to current user)
-      const storedUserRooms = localStorage.getItem('userRooms')
-      const storedUserRoomsUser = localStorage.getItem('userRoomsUser')
+
+      // Request user's rooms from server first
+      newSocket.emit('user:getRooms')
+
+      // Restore current room state from localStorage
       const storedCurrentRoom = localStorage.getItem('currentRoom')
       const storedCurrentRoomUser = localStorage.getItem('currentRoomUser')
       const lastView = localStorage.getItem('lastView')
       const lastViewUser = localStorage.getItem('lastViewUser')
-      
-      // Only restore if data belongs to current user AND user has rooms
-      if (storedUserRooms && storedUserRoomsUser === username) {
-        try {
-          const rooms = JSON.parse(storedUserRooms)
-          // Only proceed if user actually has rooms
-          if (rooms && Array.isArray(rooms) && rooms.length > 0) {
-            // Rejoin all rooms (with error handling)
-            rooms.forEach((roomName: string) => {
-              newSocket.emit('user:join', { username, room: roomName })
-            })
-            
-            // Set up error handler for rejoin failures
-            const rejoinErrorHandler = (error: { message: string }) => {
-              const errorMessage = error.message.toLowerCase()
-              if (errorMessage.includes('không tồn tại')) {
-                // Room doesn't exist, remove it from userRooms
-                const roomMatch = error.message.match(/phòng\s+"([^"]+)"/i) || 
-                                 error.message.match(/phòng\s+([^\s]+)/i)
-                if (roomMatch && roomMatch[1]) {
-                  const roomToRemove = roomMatch[1]
-                  setUserRooms((prev) => {
-                    const updated = prev.filter(r => r !== roomToRemove)
-                    localStorage.setItem('userRooms', JSON.stringify(updated))
-                    localStorage.setItem('userRoomsUser', username)
-                    return updated
-                  })
-                }
-              }
-            }
-            
-            // Temporarily add error handler for rejoin
-            newSocket.once('error', rejoinErrorHandler)
-            // Only restore current room if:
-            // 1. It belongs to current user
-            // 2. Last view was chatRoom
-            // 3. Room exists in user's rooms list
-            if (storedCurrentRoom && storedCurrentRoomUser === username && 
-                lastView === 'chatRoom' && lastViewUser === username && 
-                rooms.includes(storedCurrentRoom)) {
-              // Small delay to ensure rooms are joined first
-              setTimeout(() => {
-                setCurrentRoom(storedCurrentRoom)
-              }, 100)
-            } else {
-              // Don't restore currentRoom if conditions not met
-              setCurrentRoom('')
-            }
+
+      // Wait for user:rooms event to get actual rooms from server
+      // Then rejoin current room if it exists
+      const handleRoomsOnReconnect = (data: { rooms: string[] }) => {
+        console.log('Received rooms on reconnect:', data.rooms)
+
+        // If user has rooms and was in a room, restore it
+        if (data.rooms && data.rooms.length > 0) {
+          // Only restore current room if:
+          // 1. It belongs to current user
+          // 2. Last view was chatRoom
+          // 3. Room exists in user's rooms list
+          if (storedCurrentRoom && storedCurrentRoomUser === username &&
+              lastView === 'chatRoom' && lastViewUser === username &&
+              data.rooms.includes(storedCurrentRoom)) {
+            // Restore the room
+            setCurrentRoom(storedCurrentRoom)
+            // Request room info to get messages and users
+            newSocket.emit('user:getRoomInfo', { room: storedCurrentRoom })
           } else {
-            // User has no rooms, clear everything
+            // Don't restore currentRoom if conditions not met
             setCurrentRoom('')
-            setUserRooms([])
-            localStorage.removeItem('userRooms')
-            localStorage.removeItem('userRoomsUser')
-            localStorage.removeItem('currentRoom')
-            localStorage.removeItem('currentRoomUser')
             localStorage.setItem('lastView', 'roomSelector')
             localStorage.setItem('lastViewUser', username)
           }
-        } catch (e) {
-          console.error('Error parsing stored rooms:', e)
-          // Clear on error
+        } else {
+          // User has no rooms, clear everything
           setCurrentRoom('')
-          setUserRooms([])
-          localStorage.removeItem('userRooms')
-          localStorage.removeItem('userRoomsUser')
           localStorage.removeItem('currentRoom')
           localStorage.removeItem('currentRoomUser')
           localStorage.setItem('lastView', 'roomSelector')
           localStorage.setItem('lastViewUser', username)
         }
-      } else {
-        // Data doesn't belong to current user, clear everything
-        setCurrentRoom('')
-        setUserRooms([])
-        localStorage.removeItem('userRooms')
-        localStorage.removeItem('userRoomsUser')
-        localStorage.removeItem('currentRoom')
-        localStorage.removeItem('currentRoomUser')
-        localStorage.setItem('lastView', 'roomSelector')
-        localStorage.setItem('lastViewUser', username)
+
+        // Remove the one-time listener
+        newSocket.off('user:rooms', handleRoomsOnReconnect)
       }
+
+      // Listen for rooms response (one-time)
+      newSocket.once('user:rooms', handleRoomsOnReconnect)
     })
 
     newSocket.on('disconnect', () => {
