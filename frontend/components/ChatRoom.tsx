@@ -94,24 +94,26 @@ export default function ChatRoom({
 
   return (
     <div className={containerClass}>
-      {/* Header */}
-      <header className={`${headerClass} shadow-md px-6 py-4`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      {/* Header - Responsive */}
+      <header className={`${headerClass} shadow-md px-2 sm:px-6 py-2 sm:py-4`}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          {/* Left: Back button + Room name */}
+          <div className="flex items-center gap-1 sm:gap-4 flex-1 min-w-0">
             <button
               onClick={onAddRoom}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-md"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-md text-xs sm:text-base flex-shrink-0"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              Back
+              <span className="hidden sm:inline">Back</span>
             </button>
-            <div>
-              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-gray-50' : 'text-gray-800'} flex items-center gap-2`}>
-                💬 {room}
+            <div className="min-w-0 flex-1">
+              <h1 className={`text-sm sm:text-2xl font-bold ${isDarkMode ? 'text-gray-50' : 'text-gray-800'} flex items-center gap-1 sm:gap-2 truncate`}>
+                <span className="text-base sm:text-2xl">💬</span>
+                <span className="truncate">{room}</span>
               </h1>
-              <p className={`text-sm ${textClass}`}>
+              <p className={`text-xs sm:text-sm ${textClass} hidden sm:flex items-center`}>
                 {isConnected ? (
                   <span className="flex items-center">
                     <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
@@ -126,18 +128,26 @@ export default function ChatRoom({
               </p>
             </div>
           </div>
-          <div className="text-right mr-4">
+
+          {/* Right: User info + Settings (Hidden on mobile) */}
+          <div className="hidden lg:block text-right mr-4">
             <p className={`text-sm ${textClass}`}>You are: <span className="font-semibold text-blue-600">{username}</span></p>
             <p className={`text-xs ${textClass}`}>{users.length} user{users.length !== 1 ? 's' : ''} online</p>
           </div>
-          <div className="flex gap-2 items-center relative">
+
+          {/* Mobile: Show user count only */}
+          <div className="lg:hidden text-right">
+            <p className={`text-xs ${textClass}`}>{users.length} user{users.length !== 1 ? 's' : ''}</p>
+          </div>
+
+          <div className="flex gap-1 sm:gap-2 items-center relative flex-shrink-0">
             {/* Settings Button */}
             <button
               onClick={() => setShowSettings((prev) => !prev)}
-              className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} transition`}
+              className={`p-1.5 sm:p-2 rounded-lg ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} transition`}
               title="Cài đặt"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -150,12 +160,12 @@ export default function ChatRoom({
 
             {/* Settings Popup */}
             {showSettings && (
-              <div className={`absolute right-0 top-12 w-72 rounded-lg shadow-xl border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} p-4 z-20 ${panelClass}`}>
+              <div className={`absolute right-0 top-10 sm:top-12 w-64 sm:w-72 rounded-lg shadow-xl border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} p-3 sm:p-4 z-20 ${panelClass}`}>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium">Chế độ giao diện</span>
+                  <span className="text-xs sm:text-sm font-medium">Chế độ giao diện</span>
                   <button
                     onClick={() => setIsDarkMode((prev) => !prev)}
-                    className="px-3 py-1 text-xs rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                    className="px-2 sm:px-3 py-1 text-xs rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition"
                   >
                     {isDarkMode ? '🌙 Tối' : '☀️ Sáng'}
                   </button>
@@ -168,7 +178,7 @@ export default function ChatRoom({
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Nhập nội dung cần tìm..."
-                    className={`w-full px-3 py-2 rounded-md border text-sm ${
+                    className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 rounded-md border text-xs sm:text-sm ${
                       isDarkMode
                         ? 'bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-500'
                         : 'bg-white border-gray-300 text-black placeholder-gray-400'
@@ -186,16 +196,17 @@ export default function ChatRoom({
             {isRoomOwner && onDeleteRoom && (
               <button
                 onClick={onDeleteRoom}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium shadow-md"
+                className="hidden sm:flex px-2 sm:px-4 py-1.5 sm:py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-medium shadow-md text-xs sm:text-base"
               >
                 Xóa Phòng
               </button>
             )}
             <button
               onClick={onLogout}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition font-medium shadow-md"
+              className="px-2 sm:px-4 py-1.5 sm:py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition font-medium shadow-md text-xs sm:text-base"
             >
-              Đăng xuất
+              <span className="hidden sm:inline">Đăng xuất</span>
+              <span className="sm:hidden">Out</span>
             </button>
           </div>
         </div>

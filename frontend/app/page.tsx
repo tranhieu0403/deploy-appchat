@@ -213,10 +213,11 @@ function HomeContent() {
     })
 
     newSocket.on('connect', () => {
-      console.log('Connected to server')
+      console.log('🔌 Connected to server')
       setIsConnected(true)
 
       // Request user's rooms from server first
+      console.log('📡 Requesting user rooms...')
       newSocket.emit('user:getRooms')
 
       // Restore current room state from localStorage
@@ -225,10 +226,18 @@ function HomeContent() {
       const lastView = localStorage.getItem('lastView')
       const lastViewUser = localStorage.getItem('lastViewUser')
 
+      console.log('💾 LocalStorage state:', {
+        storedCurrentRoom,
+        storedCurrentRoomUser,
+        lastView,
+        lastViewUser,
+        currentUsername: username
+      })
+
       // Wait for user:rooms event to get actual rooms from server
       // Then rejoin current room if it exists
       const handleRoomsOnReconnect = (data: { rooms: string[] }) => {
-        console.log('Received rooms on reconnect:', data.rooms)
+        console.log('📋 Received rooms on reconnect:', data.rooms)
 
         // If user has rooms and was in a room, restore it
         if (data.rooms && data.rooms.length > 0) {
@@ -239,17 +248,25 @@ function HomeContent() {
           if (storedCurrentRoom && storedCurrentRoomUser === username &&
               lastView === 'chatRoom' && lastViewUser === username &&
               data.rooms.includes(storedCurrentRoom)) {
+            console.log('✅ Restoring room:', storedCurrentRoom)
             // Restore the room
             setCurrentRoom(storedCurrentRoom)
             // Request room info to get messages and users
             newSocket.emit('user:getRoomInfo', { room: storedCurrentRoom })
           } else {
+            console.log('❌ Not restoring room. Conditions:', {
+              hasStoredRoom: !!storedCurrentRoom,
+              userMatch: storedCurrentRoomUser === username,
+              viewMatch: lastView === 'chatRoom' && lastViewUser === username,
+              roomInList: data.rooms.includes(storedCurrentRoom || '')
+            })
             // Don't restore currentRoom if conditions not met
             setCurrentRoom('')
             localStorage.setItem('lastView', 'roomSelector')
             localStorage.setItem('lastViewUser', username)
           }
         } else {
+          console.log('⚠️ User has no rooms, clearing state')
           // User has no rooms, clear everything
           setCurrentRoom('')
           localStorage.removeItem('currentRoom')
@@ -405,13 +422,16 @@ function HomeContent() {
     })
 
     newSocket.on('user:rooms', (data: { rooms: string[] }) => {
+      console.log('📋 Received user:rooms:', data.rooms)
       setUserRooms(data.rooms)
       // Save to localStorage with username
       localStorage.setItem('userRooms', JSON.stringify(data.rooms))
       localStorage.setItem('userRoomsUser', username)
-      
+      console.log('💾 Saved to localStorage:', data.rooms)
+
       // If current room is not in the list anymore, clear it
       if (currentRoomRef.current && !data.rooms.includes(currentRoomRef.current)) {
+        console.log('⚠️ Current room not in list, clearing:', currentRoomRef.current)
         setCurrentRoom('')
         setRoomCreatedBy('')
         localStorage.setItem('lastView', 'roomSelector')
