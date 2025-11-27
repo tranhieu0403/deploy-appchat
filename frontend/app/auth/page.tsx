@@ -1,11 +1,9 @@
 'use client'
-// This page uses client-side navigation hooks; avoid pre-rendering errors by forcing dynamic render
-export const dynamic = 'force-dynamic'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function AuthCallback() {
+function AuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -24,7 +22,7 @@ export default function AuthCallback() {
       // Lưu token và username vào localStorage
       localStorage.setItem('token', token)
       localStorage.setItem('username', username)
-      
+
       // Redirect về trang chủ
       router.push('/')
     } else {
@@ -40,6 +38,21 @@ export default function AuthCallback() {
         <p className="text-white text-lg">Đang xử lý đăng nhập...</p>
       </div>
     </div>
+  )
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   )
 }
 

@@ -1,9 +1,6 @@
 'use client'
-// Avoid prerender-time errors when using next/navigation hooks (useSearchParams/useRouter)
-// This page relies on client-only hooks and should be treated as dynamic at runtime
-export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { io, Socket } from 'socket.io-client'
 import ChatRoom from '@/components/ChatRoom'
@@ -56,7 +53,7 @@ interface User {
   room: string
 }
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams()
   const [socket, setSocket] = useState<Socket | null>(null)
   const [username, setUsername] = useState<string>('')
@@ -1120,3 +1117,17 @@ export default function Home() {
   )
 }
 
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
+  )
+}
