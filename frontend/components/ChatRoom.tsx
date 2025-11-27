@@ -129,8 +129,8 @@ export default function ChatRoom({
             </div>
           </div>
 
-          {/* Right: User info (Hidden on mobile) */}
-          <div className="hidden lg:block text-right mr-2">
+          {/* Right: User info (Hidden on mobile/tablet) */}
+          <div className="hidden xl:block text-right mr-2">
             <p className={`text-sm ${textClass}`}>Đang là: <span className="font-semibold text-blue-600">{username}</span></p>
             <p className={`text-xs ${textClass}`}>{users.length} người online</p>
           </div>
@@ -211,9 +211,9 @@ export default function ChatRoom({
       </header>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto w-full px-2 sm:px-4 py-2 sm:py-6 gap-2 sm:gap-4">
-        {/* Rooms Sidebar (Left) - Hidden on mobile, show on desktop */}
-        <div className={`hidden lg:flex lg:w-64 rounded-lg shadow-lg p-4 flex-col ${panelClass}`}>
+      <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full px-2 sm:px-4 py-2 sm:py-4 gap-2 sm:gap-4 min-h-0 overflow-hidden">
+        {/* Rooms Sidebar (Left) - Hidden on mobile/tablet, show on desktop only */}
+        <div className={`hidden xl:flex xl:w-64 rounded-lg shadow-lg p-4 flex-col flex-shrink-0 ${panelClass}`}>
           <h2 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-gray-50' : 'text-gray-800'}`}>
             Đoạn chat của bạn
           </h2>
@@ -264,8 +264,8 @@ export default function ChatRoom({
           />
         </div>
 
-        {/* Users Sidebar (Right) - Hidden on mobile, show on desktop */}
-        <div className={`hidden lg:flex lg:w-64 rounded-lg shadow-lg p-4 ${panelClass}`}>
+        {/* Users Sidebar (Right) - Hidden on mobile/tablet, show on desktop only */}
+        <div className={`hidden xl:flex xl:w-64 rounded-lg shadow-lg p-4 flex-shrink-0 ${panelClass}`}>
           <UserList users={users} currentUsername={username} onStartCall={onStartCall} isDarkMode={isDarkMode} />
         </div>
       </div>
