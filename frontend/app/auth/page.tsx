@@ -1,4 +1,6 @@
 'use client'
+// This page uses client-side navigation hooks; avoid pre-rendering errors by forcing dynamic render
+export const dynamic = 'force-dynamic'
 
 import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'

@@ -1,4 +1,7 @@
 'use client'
+// Avoid prerender-time errors when using next/navigation hooks (useSearchParams/useRouter)
+// This page relies on client-only hooks and should be treated as dynamic at runtime
+export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
