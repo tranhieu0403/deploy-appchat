@@ -78,6 +78,7 @@ function HomeContent() {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
+  const localStreamRef = useRef<MediaStream | null>(null)
   const [targetCallUser, setTargetCallUser] = useState<string>('')
   const [incomingOffer, setIncomingOffer] = useState<RTCSessionDescriptionInit | null>(null)
   const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([])
@@ -87,6 +88,11 @@ function HomeContent() {
   useEffect(() => {
     currentRoomRef.current = currentRoom
   }, [currentRoom])
+
+  // Update localStreamRef when localStream changes
+  useEffect(() => {
+    localStreamRef.current = localStream
+  }, [localStream])
 
   // Check authentication on mount and restore room state
   useEffect(() => {
@@ -511,6 +517,33 @@ function HomeContent() {
     // WebRTC Socket Events
     newSocket.on('call:incoming', async (data: { from: string; offer: RTCSessionDescriptionInit; callType: 'voice' | 'video' }) => {
       console.log('📞 Incoming call from:', data.from, 'Type:', data.callType)
+
+      // Check if we're the group call initiator receiving an offer from someone who accepted
+      // This happens when User B accepts group call and sends offer back to User A
+      if (peerConnectionRef.current && localStreamRef.current) {
+        console.log('📞 Received offer from group call participant - auto answering')
+        const pc = peerConnectionRef.current
+
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.offer))
+          console.log('✅ Remote description set for group call participant')
+
+          const answer = await pc.createAnswer()
+          await pc.setLocalDescription(answer)
+          console.log('📤 Sending answer to group participant:', data.from)
+
+          newSocket.emit('call:answer-sdp', {
+            to: data.from,
+            answer: answer,
+          })
+
+          setCallStatus('connected')
+        } catch (error) {
+          console.error('❌ Error handling group call offer:', error)
+        }
+        return
+      }
+
       setTargetCallUser(data.from)
       setCallerName(data.from)
       setCallType(data.callType)
@@ -518,7 +551,7 @@ function HomeContent() {
       setIsCallModalOpen(true)
       setCallStatus('calling')
       setIncomingOffer(data.offer)
-      
+
       // Create peer connection immediately to receive ICE candidates
       const pc = new RTCPeerConnection({
         iceServers: [
@@ -526,7 +559,7 @@ function HomeContent() {
           { urls: 'stun:stun1.l.google.com:19302' },
         ]
       })
-      
+
       pc.onicecandidate = (event) => {
         if (event.candidate && newSocket) {
           console.log('🧊 Sending ICE candidate to:', data.from)
@@ -536,16 +569,16 @@ function HomeContent() {
           })
         }
       }
-      
+
       pc.ontrack = (event) => {
         console.log('📺 Received remote track:', event.track.kind)
         setRemoteStream(event.streams[0])
       }
-      
+
       pc.oniceconnectionstatechange = () => {
         console.log('🔌 ICE connection state:', pc.iceConnectionState)
       }
-      
+
       pc.onconnectionstatechange = () => {
         console.log('🔗 Connection state:', pc.connectionState)
         if (pc.connectionState === 'connected') {
@@ -554,7 +587,7 @@ function HomeContent() {
           // Handle disconnect
         }
       }
-      
+
       // Set remote description immediately
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer))
@@ -562,7 +595,7 @@ function HomeContent() {
       } catch (error) {
         console.error('❌ Error setting remote description:', error)
       }
-      
+
       peerConnectionRef.current = pc
     })
 
@@ -1011,7 +1044,34 @@ function HomeContent() {
       setLocalStream(stream)
       setCallStatus('connected')
 
-      // Use existing peer connection (already created in call:incoming)
+      // Check if this is a group call (no existing peer connection with offer)
+      if (isGroupCall && !peerConnectionRef.current) {
+        console.log('📞 Accepting GROUP call - creating new peer connection')
+        // For group calls, WE create the offer and send to caller
+        const pc = createPeerConnection(targetCallUser)
+        peerConnectionRef.current = pc
+
+        stream.getTracks().forEach((track: MediaStreamTrack) => {
+          console.log('➕ Adding local track for group call:', track.kind)
+          pc.addTrack(track, stream)
+        })
+
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        console.log('📤 Sending offer to group caller:', targetCallUser)
+
+        if (socket) {
+          socket.emit('call:offer', {
+            to: targetCallUser,
+            offer: offer,
+            callType: callType,
+            from: username,
+          })
+        }
+        return
+      }
+
+      // Use existing peer connection (already created in call:incoming for 1-1 calls)
       const pc = peerConnectionRef.current
       if (!pc) {
         console.error('❌ No peer connection found when accepting call')
@@ -1068,7 +1128,7 @@ function HomeContent() {
       setIsCallModalOpen(false)
       setCallStatus('ended')
     }
-  }, [socket, targetCallUser, callType, incomingOffer])
+  }, [socket, targetCallUser, callType, incomingOffer, isGroupCall, createPeerConnection, username])
 
   const handleRejectCall = useCallback(() => {
     if (socket && targetCallUser) {
