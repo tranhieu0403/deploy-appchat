@@ -294,10 +294,26 @@ export const handleUserDisconnect = (socket) => {
 /**
  * Xử lý lấy danh sách phòng của user (ĐÃ NÂNG CẤP)
  * - Sẽ LẤY danh sách phòng từ MongoDB
+ * - Hỗ trợ cả 2 cách gọi: có username hoặc không
  */
-export const handleGetUserRooms = async (socket) => {
-  const user = users.get(socket.id);
+export const handleGetUserRooms = async (socket, data = {}) => {
+  let user = users.get(socket.id);
+
+  // Nếu user chưa có trong memory nhưng có username, tạo user mới
+  if (!user && data && data.username) {
+    const userName = data.username.trim();
+    user = {
+      id: socket.id,
+      username: userName,
+      rooms: new Set(),
+      joinedAt: new Date()
+    };
+    users.set(socket.id, user);
+    console.log(`🔄 Auto-registered user on getRooms: ${userName}`);
+  }
+
   if (!user) {
+    console.log('⚠️ No user found for getRooms, socket:', socket.id);
     socket.emit('user:rooms', { rooms: [] });
     return;
   }
@@ -305,7 +321,7 @@ export const handleGetUserRooms = async (socket) => {
   try {
     // Tìm tất cả phòng có "user.username" trong mảng "members"
     const userRooms = await Room.find({ members: user.username }).select('name');
-    
+
     socket.emit('user:rooms', {
       rooms: userRooms.map(r => r.name) // Chỉ trả về mảng tên phòng
     });
@@ -318,14 +334,13 @@ export const handleGetUserRooms = async (socket) => {
 /**
  * Xử lý lấy thông tin phòng cụ thể (ĐÃ NÂNG CẤP)
  * - Sẽ LẤY thông tin phòng từ MongoDB
+ * - Auto-rejoin socket room nếu user là member của room trong DB
  */
 export const handleGetRoomInfo = async (socket, data) => {
   const { room } = data;
-  const user = users.get(socket.id);
-  if (!user) { return; }
+  let user = users.get(socket.id);
   if (!room || !room.trim()) { return; }
   const roomName = room.trim();
-  if (!user.rooms.has(roomName)) { return; } // Phải join (in-memory) rồi mới được lấy info
 
   try {
     // Lấy thông tin phòng từ MONGODB
@@ -335,12 +350,33 @@ export const handleGetRoomInfo = async (socket, data) => {
       return;
     }
 
+    // Auto-create user in memory if not exists (reconnect scenario)
+    if (!user) {
+      // We need username from somewhere - get from socket auth or room members
+      console.log('⚠️ User not in memory for getRoomInfo');
+      return;
+    }
+
+    // Auto-rejoin socket room if user is member in DB but not in-memory
+    if (!user.rooms.has(roomName)) {
+      // Check if user is a member of this room in DB
+      if (roomFromDB.members && roomFromDB.members.includes(user.username)) {
+        console.log(`🔄 Auto-rejoining ${user.username} to room ${roomName}`);
+        user.rooms.add(roomName);
+        socket.join(roomName);
+      } else {
+        console.log(`❌ User ${user.username} is not a member of room ${roomName}`);
+        socket.emit('error', { message: `Bạn chưa join phòng "${roomName}"` });
+        return;
+      }
+    }
+
     // Lấy lịch sử chat (giữ nguyên)
     const messageHistory = await Message.find({ room: roomName })
                                        .sort({ timestamp: -1 })
                                        .limit(50)
                                        .sort({ timestamp: 1 });
-    
+
     // Lấy danh sách user ONLINE (từ helper)
     const onlineUsers = getOnlineUsersInRoom(roomName);
 
@@ -554,7 +590,7 @@ export const setupSocketListeners = (socket) => {
   socket.on('room:delete', (data) => handleRoomDelete(socket, data));
   socket.on('user:join', (data) => handleUserJoin(socket, data));
   socket.on('user:leave', (data) => handleUserLeave(socket, data));
-  socket.on('user:getRooms', () => handleGetUserRooms(socket));
+  socket.on('user:getRooms', (data) => handleGetUserRooms(socket, data));
   socket.on('user:getRoomInfo', (data) => handleGetRoomInfo(socket, data));
   socket.on('message:send', (data) => handleMessageSend(socket, data));
   socket.on('message:recall', (data) => handleMessageRecall(socket, data));

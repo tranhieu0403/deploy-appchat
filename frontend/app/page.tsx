@@ -218,9 +218,9 @@ function HomeContent() {
       console.log('🔌 Connected to server')
       setIsConnected(true)
 
-      // Request user's rooms from server first
-      console.log('📡 Requesting user rooms...')
-      newSocket.emit('user:getRooms')
+      // Request user's rooms from server first (include username for auto-registration)
+      console.log('📡 Requesting user rooms for:', username)
+      newSocket.emit('user:getRooms', { username })
 
       // Restore current room state from localStorage
       const storedCurrentRoom = localStorage.getItem('currentRoom')

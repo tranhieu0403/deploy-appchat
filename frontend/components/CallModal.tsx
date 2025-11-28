@@ -76,8 +76,8 @@ export default function CallModal({
                 {callType === 'video' ? '📹 Video Call' : '📞 Voice Call'}
               </h2>
               <p className="text-indigo-100 mt-1">
-                {callStatus === 'calling' && !isIncoming && 'Đang gọi...'}
-                {callStatus === 'calling' && isIncoming && `${callerName} đang gọi`}
+                {(callStatus === 'calling' || callStatus === 'incoming') && !isIncoming && 'Đang gọi...'}
+                {(callStatus === 'calling' || callStatus === 'incoming') && isIncoming && `${callerName} đang gọi`}
                 {callStatus === 'connected' && 'Đã kết nối'}
                 {callStatus === 'ended' && 'Cuộc gọi đã kết thúc'}
               </p>
@@ -168,7 +168,7 @@ export default function CallModal({
 
         {/* Controls */}
         <div className="bg-white p-6">
-          {callStatus === 'calling' && isIncoming ? (
+          {(callStatus === 'calling' || callStatus === 'incoming') && isIncoming ? (
             // Incoming Call Buttons
             <div className="flex justify-center gap-4">
               <button
