@@ -32,6 +32,7 @@ interface ChatRoomProps {
   onLogout: () => void
   isConnected: boolean
   onStartCall?: (targetUser: string, callType: 'voice' | 'video') => void
+  onStartGroupCall?: (callType: 'voice' | 'video') => void
   userRooms: string[]
   onSelectRoom: (room: string) => void
 }
@@ -56,6 +57,7 @@ export default function ChatRoom({
   onLogout,
   isConnected,
   onStartCall,
+  onStartGroupCall,
   userRooms,
   onSelectRoom,
 }: ChatRoomProps) {
@@ -135,8 +137,34 @@ export default function ChatRoom({
             <p className={`text-xs ${textClass}`}>{users.length} người online</p>
           </div>
 
-          {/* Right buttons: Settings + Logout */}
+          {/* Right buttons: Group Call + Settings + Logout */}
           <div className="flex gap-1.5 sm:gap-2 items-center relative flex-shrink-0">
+            {/* Group Voice Call Button */}
+            {onStartGroupCall && users.length > 1 && (
+              <button
+                onClick={() => onStartGroupCall('voice')}
+                className={`p-1.5 sm:p-2 rounded-lg ${isDarkMode ? 'bg-green-700 hover:bg-green-600' : 'bg-green-500 hover:bg-green-600'} text-white transition`}
+                title="Gọi nhóm (Voice)"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </button>
+            )}
+
+            {/* Group Video Call Button */}
+            {onStartGroupCall && users.length > 1 && (
+              <button
+                onClick={() => onStartGroupCall('video')}
+                className={`p-1.5 sm:p-2 rounded-lg ${isDarkMode ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-500 hover:bg-blue-600'} text-white transition`}
+                title="Gọi nhóm (Video)"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            )}
+
             {/* Settings Button */}
             <button
               onClick={() => setShowSettings((prev) => !prev)}

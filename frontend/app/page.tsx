@@ -80,6 +80,8 @@ function HomeContent() {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const [targetCallUser, setTargetCallUser] = useState<string>('')
   const [incomingOffer, setIncomingOffer] = useState<RTCSessionDescriptionInit | null>(null)
+  const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([])
+  const [isGroupCall, setIsGroupCall] = useState(false)
 
   // Update ref when currentRoom changes
   useEffect(() => {
@@ -581,11 +583,14 @@ function HomeContent() {
     newSocket.on('call:ice-candidate', async (data: { from: string; candidate: RTCIceCandidateInit }) => {
       console.log('🧊 Received ICE candidate from:', data.from)
       try {
-        if (peerConnectionRef.current) {
-          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate))
+        const pc = peerConnectionRef.current
+        if (pc && pc.remoteDescription) {
+          await pc.addIceCandidate(new RTCIceCandidate(data.candidate))
           console.log('✅ ICE candidate added')
         } else {
-          console.error('❌ No peer connection when receiving ICE candidate')
+          // Buffer candidate if remote description not set yet
+          console.log('📦 Buffering ICE candidate (no remote description yet)')
+          pendingIceCandidatesRef.current.push(data.candidate)
         }
       } catch (error) {
         console.error('Error adding ICE candidate:', error)
@@ -833,25 +838,29 @@ function HomeContent() {
         to: targetCallUser,
       })
     }
-    
+
     if (localStream) {
-      localStream.getTracks().forEach(track => track.stop())
+      localStream.getTracks().forEach((track: MediaStreamTrack) => track.stop())
       setLocalStream(null)
     }
-    
+
     if (remoteStream) {
-      remoteStream.getTracks().forEach(track => track.stop())
+      remoteStream.getTracks().forEach((track: MediaStreamTrack) => track.stop())
       setRemoteStream(null)
     }
-    
+
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close()
       peerConnectionRef.current = null
     }
-    
+
+    // Clear pending ICE candidates
+    pendingIceCandidatesRef.current = []
+
     setIsCallModalOpen(false)
     setCallStatus('ended')
     setTargetCallUser('')
+    setIsGroupCall(false)
   }, [socket, targetCallUser, localStream, remoteStream])
 
   const createPeerConnection = useCallback((targetUser: string) => {
@@ -940,46 +949,114 @@ function HomeContent() {
     }
   }, [socket, username, createPeerConnection])
 
+  // Group Call - Call all users in room
+  const handleStartGroupCall = useCallback(async (type: 'voice' | 'video') => {
+    console.log('📞 Starting group call, Type:', type)
+    const otherUsers = users.filter((u: string) => u !== username)
+
+    if (otherUsers.length === 0) {
+      alert('Không có ai khác trong phòng để gọi!')
+      return
+    }
+
+    setIsGroupCall(true)
+    setCallType(type)
+    setIsIncomingCall(false)
+    setIsCallModalOpen(true)
+    setCallStatus('calling')
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: type === 'video'
+      })
+      console.log('✅ Got local stream for group call')
+      setLocalStream(stream)
+
+      // For simplicity, we call the first user (can extend to multi-peer later)
+      const targetUser = otherUsers[0]
+      setTargetCallUser(targetUser)
+
+      const pc = createPeerConnection(targetUser)
+      peerConnectionRef.current = pc
+
+      stream.getTracks().forEach((track: MediaStreamTrack) => {
+        pc.addTrack(track, stream)
+      })
+
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+      console.log('📤 Sending group call offer to:', targetUser)
+
+      if (socket) {
+        // Notify all users in room about the call
+        socket.emit('call:offer', {
+          to: targetUser,
+          offer: offer,
+          callType: type,
+          from: username,
+        })
+      }
+    } catch (error) {
+      console.error('Error starting group call:', error)
+      alert('Không thể truy cập camera/microphone')
+      handleEndCall()
+    }
+  }, [socket, username, users, createPeerConnection, handleEndCall])
+
   const handleAcceptCall = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: callType === 'video'
       })
-      
+
       setLocalStream(stream)
       setCallStatus('connected')
-      
+
       // Use existing peer connection (already created in call:incoming)
       const pc = peerConnectionRef.current
       if (!pc) {
         console.error('❌ No peer connection found when accepting call')
         return
       }
-      
+
       // Add local tracks to existing peer connection
-      stream.getTracks().forEach(track => {
+      stream.getTracks().forEach((track: MediaStreamTrack) => {
         console.log('➕ Adding local track:', track.kind)
         pc.addTrack(track, stream)
       })
-      
+
       // Create and send answer (remote description already set in call:incoming)
       const answer = await pc.createAnswer()
       await pc.setLocalDescription(answer)
       console.log('📤 Sending answer to:', targetCallUser)
-      
+
+      // Flush pending ICE candidates
+      if (pendingIceCandidatesRef.current.length > 0) {
+        console.log(`📦 Flushing ${pendingIceCandidatesRef.current.length} pending ICE candidates`)
+        for (const candidate of pendingIceCandidatesRef.current) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate))
+          } catch (e) {
+            console.error('Error adding buffered ICE candidate:', e)
+          }
+        }
+        pendingIceCandidatesRef.current = []
+      }
+
       if (socket) {
         socket.emit('call:answer-sdp', {
           to: targetCallUser,
           answer: answer,
         })
-        
+
         socket.emit('call:answer', {
           to: targetCallUser,
           accepted: true,
         })
       }
-      
+
       setIncomingOffer(null)
     } catch (error) {
       console.error('Error accepting call:', error)
@@ -1003,22 +1080,25 @@ function HomeContent() {
         accepted: false,
       })
     }
-    
+
     if (localStream) {
-      localStream.getTracks().forEach(track => track.stop())
+      localStream.getTracks().forEach((track: MediaStreamTrack) => track.stop())
       setLocalStream(null)
     }
-    
+
     if (remoteStream) {
-      remoteStream.getTracks().forEach(track => track.stop())
+      remoteStream.getTracks().forEach((track: MediaStreamTrack) => track.stop())
       setRemoteStream(null)
     }
-    
+
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close()
       peerConnectionRef.current = null
     }
-    
+
+    // Clear pending ICE candidates
+    pendingIceCandidatesRef.current = []
+
     setIsCallModalOpen(false)
     setCallStatus('ended')
     setTargetCallUser('')
@@ -1082,6 +1162,7 @@ function HomeContent() {
         onAddRoom={handleAddRoom}
         onLogout={handleLogout}
         onStartCall={handleStartCall}
+        onStartGroupCall={handleStartGroupCall}
         isConnected={isConnected}
         userRooms={userRooms}
         onSelectRoom={handleJoinRoom}
