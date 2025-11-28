@@ -386,46 +386,59 @@ export default function ChatMessage({ message, isOwnMessage, isSystemMessage, on
           {/* Hiển thị file nếu có */}
           {message.file && (
             <div className="mb-2">
-              {isImage(message.file.mimetype) ? (
-                <a 
-                  href={`http://localhost:3001${message.file.url}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <img
-                    src={`http://localhost:3001${message.file.url}`}
-                    alt={message.file.originalName}
-                    className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition"
-                    style={{ maxHeight: '300px' }}
-                  />
-                </a>
-              ) : isAudio(message.file.mimetype) ? (
-                <VoiceMessage 
-                  audioUrl={`http://localhost:3001${message.file.url}`}
-                  isOwnMessage={isOwnMessage}
-                  isDarkMode={isDarkMode}
-                />
-              ) : (
-                <a
-                  href={`http://localhost:3001${message.file.url}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center gap-2 p-2 rounded ${
-                    isOwnMessage
-                      ? 'bg-blue-700 hover:bg-blue-800'
-                      : isDarkMode
-                      ? 'bg-gray-600 hover:bg-gray-500'
-                      : 'bg-gray-300 hover:bg-gray-400'
-                  } transition`}
-                >
-                  <span className="text-2xl">{getFileIcon(message.file.mimetype)}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{message.file.originalName}</p>
-                    <p className="text-xs opacity-75">{(message.file.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                </a>
-              )}
+              {(() => {
+                // Check if URL is already absolute (Cloudinary) or relative (local)
+                const fileUrl = message.file.url.startsWith('http')
+                  ? message.file.url
+                  : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${message.file.url}`;
+
+                if (isImage(message.file.mimetype)) {
+                  return (
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img
+                        src={fileUrl}
+                        alt={message.file.originalName}
+                        className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition"
+                        style={{ maxHeight: '300px' }}
+                      />
+                    </a>
+                  );
+                } else if (isAudio(message.file.mimetype)) {
+                  return (
+                    <VoiceMessage
+                      audioUrl={fileUrl}
+                      isOwnMessage={isOwnMessage}
+                      isDarkMode={isDarkMode}
+                    />
+                  );
+                } else {
+                  return (
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center gap-2 p-2 rounded ${
+                        isOwnMessage
+                          ? 'bg-blue-700 hover:bg-blue-800'
+                          : isDarkMode
+                          ? 'bg-gray-600 hover:bg-gray-500'
+                          : 'bg-gray-300 hover:bg-gray-400'
+                      } transition`}
+                    >
+                      <span className="text-2xl">{getFileIcon(message.file.mimetype)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{message.file.originalName}</p>
+                        <p className="text-xs opacity-75">{(message.file.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    </a>
+                  );
+                }
+              })()}
             </div>
           )}
           
