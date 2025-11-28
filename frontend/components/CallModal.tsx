@@ -29,21 +29,37 @@ export default function CallModal({
 }: CallModalProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteAudioRef = useRef<HTMLAudioElement>(null)
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
 
-  // Set up video streams
+  // Set up local video stream
   useEffect(() => {
     if (localVideoRef.current && localStream) {
+      console.log('📹 Setting local stream to video element')
       localVideoRef.current.srcObject = localStream
+      localVideoRef.current.play().catch(e => console.log('Local video play error:', e))
     }
   }, [localStream])
 
+  // Set up remote video stream
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream
+    if (remoteStream) {
+      console.log('📺 Setting remote stream, tracks:', remoteStream.getTracks().map(t => t.kind))
+
+      // For video calls, use video element
+      if (callType === 'video' && remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream
+        remoteVideoRef.current.play().catch(e => console.log('Remote video play error:', e))
+      }
+
+      // For voice calls, use audio element
+      if (callType === 'voice' && remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream
+        remoteAudioRef.current.play().catch(e => console.log('Remote audio play error:', e))
+      }
     }
-  }, [remoteStream])
+  }, [remoteStream, callType])
 
   const toggleMute = () => {
     if (localStream) {
@@ -139,7 +155,7 @@ export default function CallModal({
             <>
               {/* Hidden audio element for voice call */}
               <audio
-                ref={remoteVideoRef}
+                ref={remoteAudioRef}
                 autoPlay
                 playsInline
               />

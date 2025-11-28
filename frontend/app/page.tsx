@@ -602,9 +602,26 @@ function HomeContent() {
     newSocket.on('call:answer-sdp', async (data: { from: string; answer: RTCSessionDescriptionInit }) => {
       console.log('📡 Received SDP answer from:', data.from)
       try {
-        if (peerConnectionRef.current) {
-          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer))
+        const pc = peerConnectionRef.current
+        if (pc) {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer))
           console.log('✅ Remote description set successfully')
+
+          // Flush pending ICE candidates after setting remote description
+          if (pendingIceCandidatesRef.current.length > 0) {
+            console.log(`📦 Flushing ${pendingIceCandidatesRef.current.length} pending ICE candidates after answer`)
+            for (const candidate of pendingIceCandidatesRef.current) {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate))
+              } catch (e) {
+                console.error('Error adding buffered ICE candidate:', e)
+              }
+            }
+            pendingIceCandidatesRef.current = []
+          }
+
+          // Update call status to connected
+          setCallStatus('connected')
         } else {
           console.error('❌ No peer connection when receiving answer')
         }
