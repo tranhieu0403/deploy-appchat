@@ -31,23 +31,39 @@ if (isCloudinaryConfigured) {
     params: async (req, file) => {
       let resourceType = 'auto';
       let folder = 'chat-uploads';
+      let format = undefined;
+
+      // Get file extension
+      const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+      const uniqueId = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
 
       // Determine resource type based on mimetype
       if (file.mimetype.startsWith('image/')) {
         resourceType = 'image';
         folder = 'chat-uploads/images';
+        format = ext || 'jpg';
       } else if (file.mimetype.startsWith('audio/')) {
         resourceType = 'video'; // Cloudinary uses 'video' for audio
         folder = 'chat-uploads/audio';
+        format = ext || 'webm';
       } else {
+        // For raw files (PDF, docx, etc.), include extension in public_id
         resourceType = 'raw';
         folder = 'chat-uploads/files';
+        // For raw files, we need to include extension in the public_id
+        return {
+          folder: folder,
+          resource_type: resourceType,
+          public_id: `${uniqueId}.${ext}`,
+          format: ext,
+        };
       }
 
       return {
         folder: folder,
         resource_type: resourceType,
-        public_id: `${Date.now()}-${Math.round(Math.random() * 1E9)}`,
+        public_id: uniqueId,
+        format: format,
       };
     },
   });
