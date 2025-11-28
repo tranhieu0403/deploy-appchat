@@ -12,7 +12,7 @@ interface CallModalProps {
   onEndCall: () => void
   localStream: MediaStream | null
   remoteStream: MediaStream | null
-  callStatus: 'calling' | 'connected' | 'ended'
+  callStatus: 'calling' | 'connected' | 'ended' | 'incoming'
 }
 
 export default function CallModal({

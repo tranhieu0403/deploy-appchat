@@ -74,7 +74,7 @@ function HomeContent() {
   const [callType, setCallType] = useState<'voice' | 'video'>('voice')
   const [isIncomingCall, setIsIncomingCall] = useState(false)
   const [callerName, setCallerName] = useState<string>('')
-  const [callStatus, setCallStatus] = useState<'calling' | 'connected' | 'ended'>('calling')
+  const [callStatus, setCallStatus] = useState<'calling' | 'connected' | 'ended' | 'incoming'>('calling')
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
