@@ -568,7 +568,8 @@ export const setupSocketListeners = (socket) => {
   socket.on('call:answer-sdp', (data) => handleCallAnswerSDP(socket, data));
   socket.on('call:ice-candidate', (data) => handleCallIceCandidate(socket, data));
   socket.on('call:end', (data) => handleCallEnd(socket, data));
-  
+  socket.on('call:group', (data) => handleGroupCall(socket, data));
+
   socket.on('disconnect', () => handleUserDisconnect(socket));
 };
 
@@ -647,12 +648,30 @@ export const handleCallIceCandidate = (socket, data) => {
 
 export const handleCallEnd = (socket, data) => {
   const { to } = data;
-  
+
   // Find target user's socket
   const targetUser = Array.from(users.values()).find(u => u.username === to);
-  
+
   if (targetUser) {
     socket.to(targetUser.id).emit('call:ended');
     console.log(`📵 Call ended between users`);
   }
+};
+
+/**
+ * Group Call Handler - Broadcast call to all users in room
+ */
+export const handleGroupCall = (socket, data) => {
+  const { room, callType, from } = data;
+
+  console.log(`📞 Group call in room ${room} from ${from} (${callType})`);
+
+  // Broadcast to all users in the room except the caller
+  socket.to(room).emit('call:group-incoming', {
+    from: from,
+    room: room,
+    callType: callType,
+  });
+
+  console.log(`✅ Group call notification sent to room ${room}`);
 };

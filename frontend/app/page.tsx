@@ -613,6 +613,18 @@ function HomeContent() {
       handleEndCall()
     })
 
+    // Group call incoming
+    newSocket.on('call:group-incoming', (data: { from: string; room: string; callType: 'voice' | 'video' }) => {
+      console.log('📞 Group call incoming from:', data.from, 'in room:', data.room)
+      setIsGroupCall(true)
+      setCallerName(data.from)
+      setCallType(data.callType)
+      setTargetCallUser(data.from)
+      setIsIncomingCall(true)
+      setIsCallModalOpen(true)
+      setCallStatus('incoming')
+    })
+
     setSocket(newSocket)
 
     return () => {
@@ -949,9 +961,9 @@ function HomeContent() {
     }
   }, [socket, username, createPeerConnection])
 
-  // Group Call - Call all users in room
+  // Group Call - Broadcast call to all users in room
   const handleStartGroupCall = useCallback(async (type: 'voice' | 'video') => {
-    console.log('📞 Starting group call, Type:', type)
+    console.log('📞 Starting group call, Type:', type, 'Room:', currentRoom)
     const otherUsers = users.filter((u: string) => u !== username)
 
     if (otherUsers.length === 0) {
@@ -973,26 +985,11 @@ function HomeContent() {
       console.log('✅ Got local stream for group call')
       setLocalStream(stream)
 
-      // For simplicity, we call the first user (can extend to multi-peer later)
-      const targetUser = otherUsers[0]
-      setTargetCallUser(targetUser)
-
-      const pc = createPeerConnection(targetUser)
-      peerConnectionRef.current = pc
-
-      stream.getTracks().forEach((track: MediaStreamTrack) => {
-        pc.addTrack(track, stream)
-      })
-
-      const offer = await pc.createOffer()
-      await pc.setLocalDescription(offer)
-      console.log('📤 Sending group call offer to:', targetUser)
-
-      if (socket) {
-        // Notify all users in room about the call
-        socket.emit('call:offer', {
-          to: targetUser,
-          offer: offer,
+      if (socket && currentRoom) {
+        // Broadcast group call to all users in room
+        console.log('📤 Broadcasting group call to room:', currentRoom)
+        socket.emit('call:group', {
+          room: currentRoom,
           callType: type,
           from: username,
         })
@@ -1002,7 +999,7 @@ function HomeContent() {
       alert('Không thể truy cập camera/microphone')
       handleEndCall()
     }
-  }, [socket, username, users, createPeerConnection, handleEndCall])
+  }, [socket, username, users, currentRoom, handleEndCall])
 
   const handleAcceptCall = useCallback(async () => {
     try {
