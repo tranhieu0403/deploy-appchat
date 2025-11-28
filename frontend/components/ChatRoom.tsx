@@ -238,10 +238,10 @@ export default function ChatRoom({
         </div>
       </header>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full px-2 sm:px-4 py-2 sm:py-4 gap-2 sm:gap-4 min-h-0 overflow-hidden">
+      {/* Main Chat Area - Horizontal layout on desktop */}
+      <div className="flex-1 flex flex-row max-w-7xl mx-auto w-full px-2 sm:px-4 py-2 sm:py-4 gap-2 sm:gap-4 min-h-0 overflow-hidden">
         {/* Rooms Sidebar (Left) - Hidden on mobile/tablet, show on desktop only */}
-        <div className={`hidden xl:flex xl:w-64 rounded-lg shadow-lg p-4 flex-col flex-shrink-0 ${panelClass}`}>
+        <div className={`hidden xl:flex xl:flex-col xl:w-64 rounded-lg shadow-lg p-4 flex-shrink-0 ${panelClass}`}>
           <h2 className={`text-lg font-semibold mb-3 ${isDarkMode ? 'text-gray-50' : 'text-gray-800'}`}>
             Đoạn chat của bạn
           </h2>
@@ -293,7 +293,7 @@ export default function ChatRoom({
         </div>
 
         {/* Users Sidebar (Right) - Hidden on mobile/tablet, show on desktop only */}
-        <div className={`hidden xl:flex xl:w-64 rounded-lg shadow-lg p-4 flex-shrink-0 ${panelClass}`}>
+        <div className={`hidden xl:flex xl:flex-col xl:w-64 rounded-lg shadow-lg p-4 flex-shrink-0 ${panelClass}`}>
           <UserList users={users} currentUsername={username} onStartCall={onStartCall} isDarkMode={isDarkMode} />
         </div>
       </div>
