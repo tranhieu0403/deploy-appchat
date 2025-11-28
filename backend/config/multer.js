@@ -1,5 +1,7 @@
 // backend/config/multer.js
 import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -7,24 +9,68 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Cấu hình storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    // Tạo tên file unique: timestamp-random-originalname
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    const nameWithoutExt = path.basename(file.originalname, ext);
-    cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`);
-  }
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Check if Cloudinary is configured
+const isCloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME &&
+                               process.env.CLOUDINARY_API_KEY &&
+                               process.env.CLOUDINARY_API_SECRET;
+
+let storage;
+
+if (isCloudinaryConfigured) {
+  // Use Cloudinary storage for production
+  console.log('📁 Using Cloudinary storage');
+  storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+      let resourceType = 'auto';
+      let folder = 'chat-uploads';
+
+      // Determine resource type based on mimetype
+      if (file.mimetype.startsWith('image/')) {
+        resourceType = 'image';
+        folder = 'chat-uploads/images';
+      } else if (file.mimetype.startsWith('audio/')) {
+        resourceType = 'video'; // Cloudinary uses 'video' for audio
+        folder = 'chat-uploads/audio';
+      } else {
+        resourceType = 'raw';
+        folder = 'chat-uploads/files';
+      }
+
+      return {
+        folder: folder,
+        resource_type: resourceType,
+        public_id: `${Date.now()}-${Math.round(Math.random() * 1E9)}`,
+      };
+    },
+  });
+} else {
+  // Fallback to local storage for development
+  console.log('📁 Using local disk storage (Cloudinary not configured)');
+  const uploadDir = path.join(__dirname, '../uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      const nameWithoutExt = path.basename(file.originalname, ext);
+      cb(null, `${nameWithoutExt}-${uniqueSuffix}${ext}`);
+    }
+  });
+}
 
 // File filter - chỉ cho phép hình ảnh, audio và một số file phổ biến
 const fileFilter = (req, file, cb) => {
@@ -62,3 +108,5 @@ export const upload = multer({
     fileSize: 10 * 1024 * 1024 // Giới hạn 10MB
   }
 });
+
+export { isCloudinaryConfigured };
