@@ -45,16 +45,24 @@ export default function RoomSelector({ username, onCreateRoom, onJoinRoom, onLea
       try {
         setLoadingRooms(true)
         const getBackendUrl = () => {
+          // Ưu tiên dùng NEXT_PUBLIC_API_URL từ Vercel env
+          if (process.env.NEXT_PUBLIC_API_URL) {
+            return process.env.NEXT_PUBLIC_API_URL
+          }
           if (typeof window === 'undefined') return 'http://localhost:3001'
           const hostname = window.location.hostname
           if (hostname.startsWith('26.')) return `http://${hostname}:3001`
           return 'http://localhost:3001'
         }
         const backendUrl = getBackendUrl()
+        console.log('🌐 Fetching rooms from:', backendUrl)
         const response = await fetch(`${backendUrl}/api/rooms`)
         if (response.ok) {
           const data = await response.json()
+          console.log('📋 Fetched rooms:', data.rooms)
           setAllRooms(data.rooms || [])
+        } else {
+          console.error('❌ Failed to fetch rooms, status:', response.status)
         }
       } catch (err) {
         console.error('Error fetching rooms:', err)

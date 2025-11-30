@@ -1222,10 +1222,11 @@ function HomeContent() {
 
   // Request user rooms when socket connects
   useEffect(() => {
-    if (socket && isConnected) {
-      socket.emit('user:getRooms')
+    if (socket && isConnected && username) {
+      console.log('🔄 Requesting user rooms for:', username)
+      socket.emit('user:getRooms', { username })
     }
-  }, [socket, isConnected])
+  }, [socket, isConnected, username])
 
   // Show auth form if not authenticated
   if (!isAuthenticated) {
